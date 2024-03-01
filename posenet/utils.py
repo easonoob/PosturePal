@@ -114,5 +114,5 @@ def draw_skel_and_kp(
         out_img = cv2.drawKeypoints(
             out_img, cv_keypoints, outImage=np.array([]), color=(255, 255, 0),
             flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
+    out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0), thickness=5)
     return out_img
