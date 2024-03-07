@@ -26,7 +26,7 @@ args = parser.parse_args()
 
 height = 180
 openai_api_key = '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'
-interests = ["AI", "Science", "GPU", "Brawl Stars"]
+interests = ["AI", "Science", "Brawl Stars"]
 remind_interval = 30 # seconds
 
 client = OpenAI(
@@ -133,7 +133,7 @@ def api(raw_image: list, status: str, head_angles: tuple):
                                   {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                   ]
                     }],
-        "max_tokens": 50,
+        "max_tokens": 100,
         "temperature": 1.0,
     }
     response_text = "sorry"
