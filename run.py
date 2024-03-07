@@ -24,9 +24,9 @@ parser.add_argument('--cam_height', type=int, default=720)
 parser.add_argument('--scale_factor', type=float, default=0.2)#0.7125)
 args = parser.parse_args()
 
-height = 180
+height = 180 # user's height in cm
 openai_api_key = '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'
-interests = ["AI", "Science", "Brawl Stars"]
+interests = ["AI", "Science", "Transformers"]
 remind_interval = 30 # seconds
 
 client = OpenAI(
@@ -218,7 +218,7 @@ def main():
         if frame_count % 10 == 0 and frame_count != 0:
             average_roll = average(roll_history[-10:])
             average_pitch = average(pitch_history[-10:])
-            print(f"Pose {pi}: Average Roll: {average_roll:.2f} degrees, Average Pitch: {average_pitch:.2f} degrees")
+            print(f"Average Roll: {average_roll:.2f} degrees, Average Pitch: {average_pitch:.2f} degrees")
             if average_roll <= 20 and average_roll >= -20 and average_pitch <= 10 and average_pitch >= -10:
                 good_position_time += time.time() - last_time
                 last_time = time.time()
