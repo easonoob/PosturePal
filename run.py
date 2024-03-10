@@ -13,6 +13,7 @@ import os
 from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
+import matplotlib.pyplot as plt
 
 import posenet
 
@@ -26,8 +27,8 @@ args = parser.parse_args()
 
 height = 180 # user's height in cm
 openai_api_key = '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'
-interests = ["AI", "Science", "Transformers"]
-remind_interval = 30 # seconds
+interests = ["AI", "Science", "Transformers (AI model architecture)"]
+remind_interval = 60 # seconds
 
 client = OpenAI(
     api_key=openai_api_key,
@@ -102,7 +103,7 @@ def image_to_base64(image_array, format='jpeg'):
 
 n_audios = 0
 
-def api(raw_image: list, status: str, head_angles: tuple):
+def api(raw_image: list, status: str, head_angles: tuple, best_time):
     roll, pitch = head_angles
     base64_image = image_to_base64(raw_image, format='jpeg')
     headers = {
@@ -120,11 +121,13 @@ def api(raw_image: list, status: str, head_angles: tuple):
         HUMOUROUS way. The image shows what the webcam captured. PoseNet is used to calculate the angles 
         of the head: head roll {roll:.2f} degrees, head pitch {pitch:.2f} degrees. Use the result by PoseNet 
         with caution since PoseNet is not very accurate. According to the head angles, the user is 
-        currectly sitting {gay} (this might be wrong, refer to the image for accuracy). Remind the 
+        currectly sitting {gay} (this might be wrong, refer to the image for accuracy) and the best the 
+        time user is in a good position is {best_time} seconds. Remind the 
         user directly, say to him directly. Do NOT mention PoseNet, head angle, de NOT be childish, 
-        and keep the response in a few sentences. Do NOT refuse to provide feedback based on the image. 
+        and keep the response SHORT. Do NOT refuse to provide feedback based on the image. 
         Also do not keep telling the user the same topic, tell some topics not in the user's interests, 
-        and tell some jokes too!"""
+        and tell some jokes too! Be direct (like telling the user to maintain good posture or sit up 
+        straight directly). Max tokens is 50."""
 
     payload = {
         "model": "gpt-4-vision-preview",
@@ -133,8 +136,8 @@ def api(raw_image: list, status: str, head_angles: tuple):
                                   {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                   ]
                     }],
-        "max_tokens": 100,
-        "temperature": 1.0,
+        "max_tokens": 150,
+        "temperature": 1.3,
     }
     response_text = "sorry"
     while "sorry" in response_text or "cannot provide" in response_text or "can't assist" in response_text or "cannot assist" in response_text or "can't provide" in response_text or "can't help" in response_text or "cannot help" in response_text:
@@ -224,16 +227,16 @@ def main():
                 last_time = time.time()
                 best_time = max(best_time, good_position_time)
                 print(f"Good Position Time: {good_position_time:.2f}s, Best Time: {best_time:.2f}s")
-                if time.time() - last_request_time > remind_interval*5:
-                    api(input_image_raw, "good", (average_roll, average_pitch))
+                if time.time() - last_request_time > remind_interval:
+                    api(input_image_raw, "good", (average_roll, average_pitch), best_time)
                     last_request_time = time.time()
             else:
                 good_position_time = 0
                 last_time = time.time()
                 print("You lost the good position streak!")
-                if time.time() - last_request_time > remind_interval:
-                    api(input_image_raw, "bad", (average_roll, average_pitch))
-                    last_request_time = time.time()
+                # if time.time() - last_request_time > remind_interval:
+                api(input_image_raw, "bad", (average_roll, average_pitch), best_time)
+                # last_request_time = time.time()
 
         keypoint_coords *= output_scale
 
@@ -248,7 +251,13 @@ def main():
             break
 
     print('Average FPS: ', frame_count / (time.time() - start))
+    plt.plot(roll_history)
+    plt.title("Head Roll Angle History (>0: Right, <0: Left)")
+    plt.show()
 
+    plt.plot(pitch_history)
+    plt.title("Head Pitch Angle History (>0: Forward, <0: Backward)")
+    plt.show()
 
 if __name__ == "__main__":
     main()
