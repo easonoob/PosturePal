@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 height = 180 # user's height in cm
 openai_api_key = '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'
-interests = ["AI", "Science", "Transformers (AI model architecture)"]
+interests = ["AI", "Science", "Large Language Models (LLM)"]
 remind_interval = 60 # seconds
 
 client = OpenAI(
@@ -35,68 +35,24 @@ client = OpenAI(
     organization='org-BzkVKW4kSGfQSRNOmP6h1IU2',
 )
 
-def calculate_roll_and_approximate_pitch(keypoint_coords):
-    # Extract keypoints
-    left_eye = np.array(keypoint_coords[1][:2])
-    right_eye = np.array(keypoint_coords[2][:2])
-    left_shoulder = np.array(keypoint_coords[5][:2])
-    right_shoulder = np.array(keypoint_coords[6][:2])
-
-    # Calculate vectors
-    eye_vector = right_eye - left_eye
-    shoulder_vector = right_shoulder - left_shoulder
-
-    # Roll: angle of the eye line relative to horizontal
-    roll = np.arctan2(eye_vector[1], eye_vector[0]) * (180 / np.pi)
-
-    # Normalize roll to [-180, 180] range
-    if roll > 180:
-        roll -= 360
-    roll += 90
-
-    # Pitch approximation: We'll define pitch based on the distance between the eye line and a point in the middle of the shoulder line
-    # This is a heuristic and doesn't directly correspond to pitch but can give some indication of head tilt
-    shoulder_mid = (left_shoulder + right_shoulder) / 2
-    eye_mid = (left_eye + right_eye) / 2
-    mid_vector = eye_mid - shoulder_mid
-    pitch = np.arctan2(mid_vector[1], mid_vector[0]) * (180 / np.pi) - roll  # Adjusting by roll for a rough approximation
-
-    # Normalize pitch to make it more intuitive (optional)
-    pitch = -pitch # Inverting to match conventional pitch directions
-    pitch += 180
-    if pitch > 180:
-        pitch -= 360
-    pitch += height / 90
-    # print(roll, pitch)
-
-    return roll, pitch
-
 def play_audio(audio_file):
-    # Initialize pygame mixer
     pygame.mixer.init()
-    # Load the audio file
     pygame.mixer.music.load(audio_file)
-    # Play the audio
     pygame.mixer.music.play()
-    # Keep the thread alive until the music is playing
     while pygame.mixer.music.get_busy():
         pygame.time.Clock().tick(1)
 
-# Define a thread to play audio without blocking the main program
 def start_audio_thread(audio_file):
     audio_thread = threading.Thread(target=play_audio, args=(audio_file,))
     audio_thread.start()
 
 def image_to_base64(image_array, format='jpeg'):
-    # Encode the image to the specified format
     image_array = (image_array + 1) * 127.5
     image_array = np.transpose(image_array.squeeze(0), (1, 2, 0))
     _, buffer = cv2.imencode(f'.{format}', image_array)
     
-    # Convert the buffer to a byte stream
     byte_stream = BytesIO(buffer)
     
-    # Encode the byte stream to base64
     base64_encoded_image = base64.b64encode(byte_stream.getvalue()).decode('utf-8')
     
     return base64_encoded_image
@@ -176,7 +132,7 @@ def api(raw_image: list, status: str, head_angles: tuple, best_time):
 
 def main():
     model = posenet.load_model(args.model)
-    # model = model.cuda()
+    resnet = posenet.get_resnet(height)
     output_stride = model.output_stride
 
     cap = cv2.VideoCapture(args.cam_id)
@@ -191,7 +147,7 @@ def main():
     last_time = time.time()
     last_request_time = time.time()
     best_time = 0
-    average = lambda lst: sum(lst)/len(lst)
+    average = lambda lst: sum(lst)/len(lst) if len(lst) > 0 else 0
     
     while True:
         input_image_raw, display_image, output_scale = posenet.read_cap(
@@ -214,7 +170,8 @@ def main():
         
         for pi, (pose_score, keypoint_score, keypoint_coord) in enumerate(zip(pose_scores, keypoint_scores, keypoint_coords)):
             if pose_score > 0.15:
-                roll, pitch = calculate_roll_and_approximate_pitch(keypoint_coord)
+                with torch.no_grad():
+                    roll, pitch = resnet(input_image, keypoint_coord)
                 roll_history.append(roll)
                 pitch_history.append(pitch)
 
@@ -234,9 +191,9 @@ def main():
                 good_position_time = 0
                 last_time = time.time()
                 print("You lost the good position streak!")
-                # if time.time() - last_request_time > remind_interval:
-                api(input_image_raw, "bad", (average_roll, average_pitch), best_time)
-                # last_request_time = time.time()
+                if time.time() - last_request_time > 10:
+                    api(input_image_raw, "bad", (average_roll, average_pitch), best_time)
+                    last_request_time = time.time()
 
         keypoint_coords *= output_scale
 
@@ -251,12 +208,13 @@ def main():
             break
 
     print('Average FPS: ', frame_count / (time.time() - start))
+    print('Best Continuous Good Position Time: ', best_time, 'seconds')
     plt.plot(roll_history)
     plt.title("Head Roll Angle History (>0: Right, <0: Left)")
     plt.show()
 
     plt.plot(pitch_history)
-    plt.title("Head Pitch Angle History (>0: Forward, <0: Backward)")
+    plt.title("Head Pitch Angle History (>0: Backward, <0: Forward)")
     plt.show()
 
 if __name__ == "__main__":
