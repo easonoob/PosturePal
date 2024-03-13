@@ -6,7 +6,6 @@ import requests
 import numpy as np
 import base64
 from io import BytesIO
-from openai import OpenAI
 from pathlib import Path
 import threading
 import os
@@ -18,7 +17,7 @@ import matplotlib.pyplot as plt
 import posenet
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', type=int, default=101)
+parser.add_argument('--model', type=int, default=6969)
 parser.add_argument('--cam_id', type=int, default=0) # 1
 parser.add_argument('--cam_width', type=int, default=1280)
 parser.add_argument('--cam_height', type=int, default=720)
@@ -26,14 +25,9 @@ parser.add_argument('--scale_factor', type=float, default=0.2)#0.7125)
 args = parser.parse_args()
 
 height = 180 # user's height in cm
-openai_api_key = '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'
+openai_api_key = input("OPENAI_API_KEY: ")
 interests = ["AI", "Science", "Large Language Models (LLM)"]
-remind_interval = 60 # seconds
-
-client = OpenAI(
-    api_key=openai_api_key,
-    organization='org-BzkVKW4kSGfQSRNOmP6h1IU2',
-)
+remind_interval = 1800 # seconds
 
 def play_audio(audio_file):
     pygame.mixer.init()
@@ -83,7 +77,7 @@ def api(raw_image: list, status: str, head_angles: tuple, best_time):
         and keep the response SHORT. Do NOT refuse to provide feedback based on the image. 
         Also do not keep telling the user the same topic, tell some topics not in the user's interests, 
         and tell some jokes too! Be direct (like telling the user to maintain good posture or sit up 
-        straight directly). Max tokens is 50."""
+        straight directly). BE HILARIOUS. Max tokens is 50."""
 
     payload = {
         "model": "gpt-4-vision-preview",
@@ -112,14 +106,7 @@ def api(raw_image: list, status: str, head_angles: tuple, best_time):
         "input": response_text,
     }
     audio_response = requests.post("https://api.openai.com/v1/audio/speech", headers=headers, json=audio_payload)
-    # audio_response = client.audio.speech.create(
-    #     model="tts-1-hd",
-    #     voice="alloy",
-    #     input=response
-    # )
-    # audio_response.with_streaming_response.method(speech_file_path)
     if audio_response.status_code == 200:
-        # os.remove(speech_file_path) if os.path.exists(speech_file_path) else None
         os.makedirs("tts") if not os.path.exists("tts") else None
         with open(speech_file_path, 'wb') as audio_file:
             audio_file.write(audio_response.content)
@@ -191,18 +178,18 @@ def main():
                 good_position_time = 0
                 last_time = time.time()
                 print("You lost the good position streak!")
-                if time.time() - last_request_time > 10:
+                if time.time() - last_request_time > 60: #10
                     api(input_image_raw, "bad", (average_roll, average_pitch), best_time)
                     last_request_time = time.time()
 
         keypoint_coords *= output_scale
 
         # TODO this isn't particularly fast, use GL for drawing and display someday...
-        overlay_image = posenet.draw_skel_and_kp(
-            display_image, pose_scores, keypoint_scores, keypoint_coords,
-            min_pose_score=0.15, min_part_score=0.1)
+        # overlay_image = posenet.draw_skel_and_kp(
+        #     display_image, pose_scores, keypoint_scores, keypoint_coords,
+        #     min_pose_score=0.15, min_part_score=0.1)
 
-        cv2.imshow('posenet', overlay_image)
+        # cv2.imshow('posenet', overlay_image)
         frame_count += 1
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -214,7 +201,7 @@ def main():
     plt.show()
 
     plt.plot(pitch_history)
-    plt.title("Head Pitch Angle History (>0: Backward, <0: Forward)")
+    plt.title("Head Pitch Angle History (>0: Forward, <0: Backward)")
     plt.show()
 
 if __name__ == "__main__":

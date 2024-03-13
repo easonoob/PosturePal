@@ -72,7 +72,8 @@ MOBILENET_V1_CHECKPOINTS = {
     50: 'mobilenet_v1_050',
     75: 'mobilenet_v1_075',
     100: 'mobilenet_v1_100',
-    101: 'mobilenet_v1_101'
+    101: 'mobilenet_v1_101',
+    6969: 'finetuned_posenet'
 }
 
 MOBILE_NET_V1_100 = [

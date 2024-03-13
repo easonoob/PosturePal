@@ -56,7 +56,7 @@ class resnet(nn.Module):
         pitch += 180
         if pitch > 180:
             pitch -= 360
-        pitch -= self.height / 90
+        pitch += self.height / 30
 
         return roll, pitch
 
