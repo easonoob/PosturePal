@@ -21,7 +21,7 @@ class PostureBackend:
 
         self.camera_id = 0
         self.api_key = ""
-        self.interests = ["AI", "Science", "Large Language Models (LLM)"]
+        self.interests = 'AI, Science, Large Language Models (LLM)'
         self.remind_interval = 1800
         self.n_audios = 0
         self.stop_flag = False
@@ -31,9 +31,14 @@ class PostureBackend:
 
     def set_camera_id(self, cam_id):
         self.camera_id = cam_id
+        self.stop_detection()
+        self.start_detection()
 
     def set_openai_api_key(self, api_key):
         self.api_key = api_key
+
+    def set_interest(self, interests):
+        self.interests = interests
 
     def encode_frame(self, frame):
         _, buffer = cv2.imencode('.jpg', frame)
@@ -64,11 +69,26 @@ class PostureBackend:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        prompt = f"""You are PosturePal, a friendly assistant for posture detection. Provide personalized and humorous feedback.
-        Head Roll: {roll:.2f}, Head Pitch: {pitch:.2f}. Status: {status}, Best Good Posture Time: {best_time}s."""
+        if status == 'good':
+            gay = "in a good position"
+        elif status == 'bad':
+            gay = "in a bad position"
+        prompt = f"""You are PosturePal, a friendly and humourous assistant that detects the user's 
+            sitting posture and remind him if it is wrong or encourage him to keep it up if it is correct 
+            based on the user's interests: {self.interests} in a FUNNY, CREATIVE, PERSONALIZED, and 
+            *HUMOUROUS* way. The image shows what the webcam captured. PoseNet is used to calculate the angles 
+            of the head: head roll {roll:.2f} degrees, head pitch {pitch:.2f} degrees. Use the result by PoseNet 
+            with caution since PoseNet is not very accurate. According to the head angles, the user is 
+            currectly sitting {gay} (this might be wrong, refer to the image for accuracy) and the best the 
+            time user is in a good position is {best_time} seconds. Remind the 
+            user directly, say to him directly. Do NOT mention PoseNet, head angle, de NOT be childish, 
+            and keep the response SHORT. Do NOT refuse to provide feedback based on the image. 
+            Also do not keep telling the user the same topic, tell some topics not in the user's interests, 
+            and tell some jokes too! Be direct (like telling the user to maintain good posture or sit up 
+            straight directly). BE HILARIOUS. Max tokens is 50."""
 
         payload = {
-            "model": "gpt-4-vision-preview",
+            "model": "gpt-4o",
             "messages": [{
                 "role": "user",
                 "content": [
@@ -80,12 +100,13 @@ class PostureBackend:
             "temperature": 1.3,
         }
 
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-        if response.status_code != 200:
-            print("Error:", response.json())
-            return
-
-        response_text = response.json()['choices'][0]['message']['content']
+        response_text = "sorry"
+        while "sorry" in response_text or "cannot provide" in response_text or "can't assist" in response_text or "cannot assist" in response_text or "can't provide" in response_text or "can't help" in response_text or "cannot help" in response_text:
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            if response.status_code != 200:
+                print("Error:", response.json())
+                return
+            response_text = response.json()['choices'][0]['message']['content']
         print(response_text)
 
         audio_file_path = Path(f"tts/speech{self.n_audios}.mp3")

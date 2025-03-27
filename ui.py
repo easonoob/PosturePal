@@ -5,6 +5,7 @@ def main(page: ft.Page):
     page.title = "PostureSeeker"
     page.window_width = 1000
     page.window_height = 700
+    page.theme_mode = (ft.ThemeMode.DARK)
 
     # We store whether detection is running
     detection_running = True
@@ -21,13 +22,13 @@ def main(page: ft.Page):
     plot_placeholder = ft.Container(
         content=ft.Text("Some Plots Here", size=18),
         alignment=ft.alignment.center,
-        bgcolor=ft.colors.AMBER_50,
+        bgcolor=ft.Colors.AMBER_50,
         width=300,
         height=350
     )
 
     # -- Settings Modal Controls --
-    openai_key_field = ft.TextField(label="OpenAI API Key", width=400)
+    openai_key_field = ft.TextField(label="OpenAI API Key", width=400, multiline=True, min_lines=1, max_lines=3)
     camera_id_field = ft.TextField(label="Camera ID", width=400, value="0")
     theme_dropdown = ft.Dropdown(
         width=200,
@@ -35,8 +36,9 @@ def main(page: ft.Page):
             ft.dropdown.Option("LIGHT"),
             ft.dropdown.Option("DARK"),
         ],
-        value="LIGHT"
+        value="DARK"
     )
+    interest_field = ft.TextField(label="Interest", width=400, value='AI, Science, Large Language Models (LLM)', multiline=True, min_lines=1, max_lines=5)
 
     def close_settings_modal(e):
         page.theme_mode = (
@@ -46,6 +48,7 @@ def main(page: ft.Page):
         if camera_id_field.value.isdigit():
             backend.set_camera_id(int(camera_id_field.value))
         backend.set_openai_api_key(openai_key_field.value)
+        backend.set_interest(interest_field.value)
 
         # settings_modal.open = False
         page.close(settings_modal)
@@ -60,6 +63,7 @@ def main(page: ft.Page):
                 openai_key_field,
                 camera_id_field,
                 ft.Row([ft.Text("Theme:"), theme_dropdown]),
+                interest_field,
             ],
             tight=True,
         ),

@@ -17,7 +17,7 @@ def load_model(model_id, output_stride=16, model_dir=MODEL_DIR):
         assert os.path.exists(model_path)
 
     model = MobileNetV1(model_id, output_stride=output_stride)
-    load_dict = torch.load(model_path)
+    load_dict = torch.load(model_path, weights_only=True)
     model.load_state_dict(load_dict)
 
     return model
