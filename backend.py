@@ -175,7 +175,7 @@ class PostureBackend:
                 status = 'bad'
             
             score = (30 - abs(avg_roll)) + (30 - abs(avg_pitch)) + random.random()*5
-            score = math.floor(score)
+            score = min(math.floor(score), 100)
 
             if time.time() - last_request_time > 60:
                 self.api_request(frame, status, (avg_roll, avg_pitch), best_time)

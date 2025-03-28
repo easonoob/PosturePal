@@ -43,13 +43,19 @@ def main(page: ft.Page):
             labels_size=40,
             title=ft.Text("Score", size=16, weight=ft.FontWeight.BOLD),
             title_size=20,
-            # labels=[
-            #     ft.ChartAxisLabel(value=0, label=ft.Text("0")),
-            #     ft.ChartAxisLabel(value=333, label=ft.Text("333")),
-            #     ft.ChartAxisLabel(value=666, label=ft.Text("666")),
-            #     ft.ChartAxisLabel(value=999, label=ft.Text("999"))
-            # ],
-            # show_labels=True
+            labels=[
+                ft.ChartAxisLabel(value=0, label=ft.Text("0")),
+                ft.ChartAxisLabel(value=10, label=ft.Text("10")),
+                ft.ChartAxisLabel(value=20, label=ft.Text("20")),
+                ft.ChartAxisLabel(value=30, label=ft.Text("30")),
+                ft.ChartAxisLabel(value=40, label=ft.Text("40")),
+                ft.ChartAxisLabel(value=50, label=ft.Text("50")),
+                ft.ChartAxisLabel(value=60, label=ft.Text("60")),
+                ft.ChartAxisLabel(value=70, label=ft.Text("70")),
+                ft.ChartAxisLabel(value=80, label=ft.Text("80")),
+            ],
+            labels_interval=10,  # Show labels every 10 units
+            show_labels=True
         ),
         bottom_axis=ft.ChartAxis(
             labels_size=40,
@@ -59,7 +65,7 @@ def main(page: ft.Page):
             show_labels=True
         ),
         min_y=0,
-        max_y=500,
+        max_y=80,
         # bgcolor=ft.Colors.GREY_400,
         tooltip_bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.BLUE_100)
     )
@@ -130,12 +136,38 @@ def main(page: ft.Page):
         global temp_historical_scores
         temp_historical_scores.append(score_val)
         if len(temp_historical_scores) > 10:
-            # historical_scores.pop(0)
-            historical_scores.append(sum(temp_historical_scores)/len(temp_historical_scores))
+            # # historical_scores.pop(0)
+            # historical_scores.append(sum(temp_historical_scores)/len(temp_historical_scores))
+            # temp_historical_scores = []
+            # score_chart.data_series[0].data_points = [
+            #     ft.LineChartDataPoint(x, y) for x, y in enumerate(historical_scores)
+            # ]
+            historical_scores.append(sum(temp_historical_scores) / len(temp_historical_scores))
             temp_historical_scores = []
+
+            # Update chart data points
             score_chart.data_series[0].data_points = [
                 ft.LineChartDataPoint(x, y) for x, y in enumerate(historical_scores)
             ]
+
+            # Dynamically adjust chart width based on number of data points
+            num_points = len(historical_scores)
+            chart_width = max(450, num_points * 20)  # 20 pixels per data point, minimum 450
+            score_chart.width = chart_width
+            score_chart_container.width = chart_width
+
+            # Dynamically adjust x-axis labels_interval to show ~5-10 labels in the visible area
+            visible_points = min(num_points, 450 // 20)  # Number of points visible in 450px
+            if visible_points > 0:
+                desired_labels = min(max(5, visible_points // 10), 10)  # Between 5 and 10 labels
+                score_chart.bottom_axis.labels_interval = max(1, visible_points // desired_labels)
+
+            # Auto-scroll to the rightmost position (latest time)
+            # if num_points > 0:
+            #     # Calculate the scroll offset to show the latest data point
+            #     scroll_offset = max(0, chart_width - 450)  # 450 is the visible width
+                # score_chart_container.scroll_to(offset=scroll_offset, duration=500)  # Smooth scroll to the end
+
 
         page.update()
 
