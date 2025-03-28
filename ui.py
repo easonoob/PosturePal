@@ -1,29 +1,74 @@
 import flet as ft
 from backend import PostureBackend
 
+historical_scores = []
+temp_historical_scores = []
+
 def main(page: ft.Page):
     page.title = "PostureSeeker"
     page.window_width = 1000
     page.window_height = 700
     page.theme_mode = (ft.ThemeMode.DARK)
 
-    # We store whether detection is running
     detection_running = True
 
-    # Create placeholders for text, camera image, etc.
     status_text = ft.Text("You are doing great!", size=20)
-    score_text = ft.Text("Score: 390 | Good position streak: 1 hour", size=16)
+    score_text = ft.Text("Score: 390 | Good position streak: 1 Minutes", size=16)
     camera_image = ft.Image(
         src="",
         width=500,
         height=350,
         fit=ft.ImageFit.CONTAIN
     )
-    plot_placeholder = ft.Container(
-        content=ft.Text("Some Plots Here", size=18),
-        alignment=ft.alignment.center,
-        bgcolor=ft.Colors.AMBER_50,
-        width=300,
+    # plot_placeholder = ft.Container(
+    #     content=ft.Text("Some Plots Here", size=18),
+    #     alignment=ft.alignment.center,
+    #     bgcolor=ft.Colors.AMBER_50,
+    #     width=300,
+    #     height=350
+    # )
+    score_chart = ft.LineChart(
+        data_series=[
+            ft.LineChartData(
+                data_points=[ft.LineChartDataPoint(x, y) for x, y in enumerate(historical_scores)],
+                stroke_width=3,
+                color=ft.Colors.BLUE_600,
+                curved=True,
+                stroke_cap_round=True
+            )
+        ],
+        width=450,
+        height=350,
+        left_axis=ft.ChartAxis(
+            labels_size=40,
+            title=ft.Text("Score", size=16, weight=ft.FontWeight.BOLD),
+            title_size=20,
+            # labels=[
+            #     ft.ChartAxisLabel(value=0, label=ft.Text("0")),
+            #     ft.ChartAxisLabel(value=333, label=ft.Text("333")),
+            #     ft.ChartAxisLabel(value=666, label=ft.Text("666")),
+            #     ft.ChartAxisLabel(value=999, label=ft.Text("999"))
+            # ],
+            # show_labels=True
+        ),
+        bottom_axis=ft.ChartAxis(
+            labels_size=40,
+            title=ft.Text("Time (Recent Updates)", size=16, weight=ft.FontWeight.BOLD),
+            title_size=20,
+            labels_interval=1,
+            show_labels=True
+        ),
+        min_y=0,
+        max_y=500,
+        # bgcolor=ft.Colors.GREY_400,
+        tooltip_bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.BLUE_100)
+    )
+
+    score_chart_container = ft.Container(
+        content=score_chart,
+        border=ft.border.all(1, ft.Colors.GREY_700),
+        border_radius=10,
+        width=450,
         height=350
     )
 
@@ -44,13 +89,11 @@ def main(page: ft.Page):
         page.theme_mode = (
             ft.ThemeMode.LIGHT if theme_dropdown.value == "LIGHT" else ft.ThemeMode.DARK
         )
-        # Apply new camera ID and openai key to backend
         if camera_id_field.value.isdigit():
             backend.set_camera_id(int(camera_id_field.value))
         backend.set_openai_api_key(openai_key_field.value)
         backend.set_interest(interest_field.value)
 
-        # settings_modal.open = False
         page.close(settings_modal)
         print("Settings saved")
         page.update()
@@ -73,7 +116,6 @@ def main(page: ft.Page):
         actions_alignment=ft.MainAxisAlignment.END,
     )
 
-    # Add modal to the page
     page.dialog = settings_modal
 
     # -- Backend object --
@@ -83,12 +125,22 @@ def main(page: ft.Page):
 
     def update_text_callback(posture_str, score_val, streak_val):
         status_text.value = posture_str
-        score_text.value = f"Score: {score_val} | Good position streak: {streak_val} hour"
+        score_text.value = f"Score: {score_val} | Good position streak: {streak_val} minute(s)"
+
+        global temp_historical_scores
+        temp_historical_scores.append(score_val)
+        if len(temp_historical_scores) > 10:
+            # historical_scores.pop(0)
+            historical_scores.append(sum(temp_historical_scores)/len(temp_historical_scores))
+            temp_historical_scores = []
+            score_chart.data_series[0].data_points = [
+                ft.LineChartDataPoint(x, y) for x, y in enumerate(historical_scores)
+            ]
+
         page.update()
 
     backend = PostureBackend(update_image_callback, update_text_callback)
 
-    # Start detection right away
     backend.start_detection()
 
     # -- Button handlers --
@@ -142,7 +194,7 @@ def main(page: ft.Page):
     bottom_row = ft.Row(
         [
             camera_image,
-            plot_placeholder
+            score_chart_container
         ],
         alignment=ft.MainAxisAlignment.START
     )

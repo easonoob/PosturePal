@@ -6,9 +6,10 @@ import time
 import threading
 import requests
 from pathlib import Path
-from io import BytesIO
+import random
 import posenet
 import pygame
+import math
 
 class PostureBackend:
     def __init__(self, update_image_callback, update_text_callback):
@@ -86,6 +87,7 @@ class PostureBackend:
             Also do not keep telling the user the same topic, tell some topics not in the user's interests, 
             and tell some jokes too! Be direct (like telling the user to maintain good posture or sit up 
             straight directly). BE HILARIOUS. Max tokens is 50."""
+        # prompt = "Determine if there is a human and whether he is sitting properly based on the image provided."
 
         payload = {
             "model": "gpt-4o",
@@ -171,13 +173,16 @@ class PostureBackend:
             else:
                 good_position_time = 0
                 status = 'bad'
+            
+            score = (30 - abs(avg_roll)) + (30 - abs(avg_pitch)) + random.random()*5
+            score = math.floor(score)
 
             if time.time() - last_request_time > 60:
                 self.api_request(frame, status, (avg_roll, avg_pitch), best_time)
                 last_request_time = time.time()
 
             self.update_image_callback(self.encode_frame(frame))
-            self.update_text_callback("You are doing great!" if status == 'good' else "Adjust your posture!", 999, int(best_time / 3600))
+            self.update_text_callback("You are doing great!" if status == 'good' else "Adjust your posture!", score, int(good_position_time / 60))
 
             last_time = time.time()
             frame_count += 1
